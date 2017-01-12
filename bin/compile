@@ -76,7 +76,8 @@ source $BIN_DIR/warnings
 mkdir -p /app/.heroku
 
 # Set up outputs under new context
-PROFILE_PATH="$BUILD_DIR/.profile.d/python.sh"
+PROFILE_PATH="$BUILD_DIR/.profile.d/miniconda.sh"
+# PROFILE_PATH="$BUILD_DIR/.profile.d/python.sh"
 EXPORT_PATH="$BIN_DIR/../export"
 GUNICORN_PROFILE_PATH="$BUILD_DIR/.profile.d/python.gunicorn.sh"
 
@@ -84,7 +85,7 @@ GUNICORN_PROFILE_PATH="$BUILD_DIR/.profile.d/python.gunicorn.sh"
 export BUILD_DIR CACHE_DIR BIN_DIR PROFILE_PATH EXPORT_PATH
 
 # Prepend proper environment variables for Python use.
-export PATH=/app/.heroku/python/bin:/app/.heroku/vendor/bin:$PATH
+export PATH=/app/.heroku/miniconda/bin:/app/.heroku/python/bin:/app/.heroku/vendor/bin:$PATH
 export PYTHONUNBUFFERED=1
 export LANG=en_US.UTF-8
 export C_INCLUDE_PATH=/app/.heroku/vendor/include:/app/.heroku/python/include:$C_INCLUDE_PATH
@@ -146,6 +147,7 @@ bpwatch start restore_cache
     cp -R $CACHE_DIR/.heroku/python .heroku/ &> /dev/null || true
     cp -R $CACHE_DIR/.heroku/python-stack .heroku/ &> /dev/null || true
     cp -R $CACHE_DIR/.heroku/python-version .heroku/ &> /dev/null || true
+    cp -R $CACHE_DIR/.heroku/miniconda .heroku/ &> /dev/null || true
     cp -R $CACHE_DIR/.heroku/vendor .heroku/ &> /dev/null || true
     cp -R $CACHE_DIR/.heroku/venv .heroku/ &> /dev/null || true
     if [[ -d $CACHE_DIR/.heroku/src ]]; then
@@ -190,6 +192,9 @@ sub-env $BIN_DIR/steps/geo-libs
 # GDAL support.
 source $BIN_DIR/steps/gdal
 
+# Miniconda support.
+source $BIN_DIR/steps/conda-compile
+
 # Install dependencies with Pip (where the magic happens).
 source $BIN_DIR/steps/pip-install
 
@@ -201,11 +206,12 @@ deep-cp /app/.heroku/src $BUILD_DIR/.heroku/src
 sub-env $BIN_DIR/steps/collectstatic
 
 # Create .profile script for application runtime environment variables.
-set-env PATH '$HOME/.heroku/python/bin:$PATH'
+set-env PATH '$HOME/.heroku/python/bin:$HOME/.heroku/miniconda/bin:$PATH'
 set-env PYTHONUNBUFFERED true
-set-env PYTHONHOME /app/.heroku/python
+set-env PYTHONHOME /app/.heroku/miniconda
 set-env LIBRARY_PATH '/app/.heroku/vendor/lib:/app/.heroku/python/lib:$LIBRARY_PATH'
-set-env LD_LIBRARY_PATH '/app/.heroku/vendor/lib:/app/.heroku/python/lib:$LD_LIBRARY_PATH'
+set-env LD_LIBRARY_PATH
+'/app/.heroku/vendor/lib/atlas-base/atlas:/app/.heroku/vendor/lib/atlas-base:/app/.heroku/vendor/lib/:/app/.heroku/vendor/lib:/app/.heroku/python/lib:$LD_LIBRARY_PATH'
 set-default-env LANG en_US.UTF-8
 set-default-env PYTHONHASHSEED random
 set-default-env PYTHONPATH /app/
@@ -235,6 +241,7 @@ bpwatch start dump_cache
   rm -rf $CACHE_DIR/.heroku/python-version
   rm -rf $CACHE_DIR/.heroku/python-stack
   rm -rf $CACHE_DIR/.heroku/vendor
+  rm -rf $CACHE_DIR/.heroku/miniconda
   rm -rf $CACHE_DIR/.heroku/venv
   rm -rf $CACHE_DIR/.heroku/src
 
@@ -242,6 +249,7 @@ bpwatch start dump_cache
   cp -R .heroku/python $CACHE_DIR/.heroku/
   cp -R .heroku/python-version $CACHE_DIR/.heroku/
   cp -R .heroku/python-stack $CACHE_DIR/.heroku/ &> /dev/null || true
+  cp -R .heroku/miniconda $CACHE_DIR/.heroku/ &> /dev/null || true
   cp -R .heroku/vendor $CACHE_DIR/.heroku/ &> /dev/null || true
   cp -R .heroku/venv $CACHE_DIR/.heroku/ &> /dev/null || true
   if [[ -d .heroku/src ]]; then
